@@ -27,12 +27,16 @@ import androidx.compose.ui.unit.sp
 import com.example.recuerdago.ui.theme.RecuerdagoTheme
 import com.example.recuerdago.viewmodel.AuthViewModel
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.material.icons.filled.AccessAlarm
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.NavController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.recuerdago.screens.HomeScreen
+import com.example.recuerdago.screens.rutas.RutasScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -58,6 +62,13 @@ class MainActivity : ComponentActivity() {
                         composable("home") {
                             HomeScreen(authViewModel = authViewModel, navController = navController)
                         }
+                        composable(
+                            "rutas/{userId}",
+                            arguments = listOf(navArgument("userId") { type = NavType.StringType })
+                        ) { backStackEntry ->
+                            val userId = backStackEntry.arguments?.getString("userId") ?: "N/A"
+                            RutasScreen(userId = userId)
+                        }
                     }
                 }
             }
@@ -75,7 +86,7 @@ fun LoginScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
-    // Observa el user
+    // Observa el usuario
     LaunchedEffect(authViewModel.user) {
         if (authViewModel.user != null) {
             navController.navigate("home") {
@@ -88,14 +99,14 @@ fun LoginScreen(
     LaunchedEffect(authViewModel.errorMessage) {
         authViewModel.errorMessage?.let { error ->
             Toast.makeText(context, error, Toast.LENGTH_LONG).show()
-            authViewModel.clearError() // Ahora sí funciona
+            authViewModel.clearError()
         }
     }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(MaterialTheme.colorScheme.background)
             .imePadding()
             .verticalScroll(rememberScrollState())
             .padding(32.dp),
@@ -104,17 +115,17 @@ fun LoginScreen(
     ) {
         Spacer(modifier = Modifier.weight(0.5f))
 
-        // Logo compuesto
+        // Logo
         Box(modifier = Modifier.size(100.dp), contentAlignment = Alignment.TopEnd) {
             Icon(
                 imageVector = Icons.Default.LocationOn,
                 contentDescription = "Ubicación",
-                tint = Color(0xFF2E7D32),
+                tint = Color(0xFF64B5F6), // azul claro
                 modifier = Modifier.fillMaxSize()
             )
             Icon(
-                imageVector = Icons.Default.DateRange,
-                contentDescription = "Reloj",
+                imageVector = Icons.Default.AccessAlarm,
+                contentDescription = "Alarma",
                 tint = Color.Red,
                 modifier = Modifier
                     .size(36.dp)
@@ -125,7 +136,7 @@ fun LoginScreen(
         Text(
             text = "RecuerdaGo",
             fontSize = 32.sp,
-            color = Color.Black,
+            color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
@@ -159,15 +170,22 @@ fun LoginScreen(
         Button(
             onClick = {
                 if (email.isNotBlank() && password.isNotBlank()) {
-                    authViewModel.login(email, password) {
-                        // onSuccess opcional, LaunchedEffect se encarga de la navegación
-                    }
+                    authViewModel.login(email, password) { }
                 } else {
-                    Toast.makeText(context, "Por favor completa todos los campos", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        context,
+                        "Por favor completa todos los campos",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             },
-            modifier = Modifier.fillMaxWidth().height(50.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFF1976D2), // azul más intenso
+                contentColor = Color.White
+            ),
             enabled = !authViewModel.isLoading
         ) {
             if (authViewModel.isLoading) {
@@ -177,9 +195,9 @@ fun LoginScreen(
                     strokeWidth = 2.dp
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(text = "Iniciando...", fontSize = 18.sp, color = Color.White)
+                Text("Iniciando...", fontSize = 18.sp, color = Color.White)
             } else {
-                Text(text = "Iniciar sesión", fontSize = 18.sp, color = Color.White)
+                Text("Iniciar sesión", fontSize = 18.sp, color = Color.White)
             }
         }
 
