@@ -28,9 +28,11 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
+import com.example.recuerdago.network.NominatimClient
 import com.example.recuerdago.screens.GetCurrentLocation
 import com.example.recuerdago.screens.MiniMap
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.osmdroid.util.GeoPoint
 
 @Composable
@@ -59,6 +61,7 @@ fun RutasScreen(
 
     var selectedLocation by remember { mutableStateOf<Pair<Double, Double>?>(null) }
     var selectedLocationName by remember { mutableStateOf("") }
+    val coroutineScope = rememberCoroutineScope()
 
     val sampleLocations = listOf(
         LocationItem("Casa", "Av. Principal 123, Quevedo", "85%"),
@@ -278,17 +281,27 @@ fun RutasScreen(
                                         modifier = Modifier.fillMaxSize(),
                                         zoom = 17.0,
                                         userLocation = userLocation,
-                                        selectedMarker = selectedLocation, // Pasar el estado compartido
+                                        selectedMarker = selectedLocation,
                                         onMarkerAdded = { lat, lng ->
-                                            selectedLocation = Pair(lat, lng) // Actualizar el estado compartido
+                                            selectedLocation = Pair(lat, lng)
+
+                                            // Llamada a Nominatim
+                                            coroutineScope.launch {
+                                                try {
+                                                    val address = NominatimClient.apiService.reverseGeocode(lat = lat, lon = lng)
+                                                    selectedLocationName = address.display_name ?: "Dirección no encontrada"
+                                                } catch (e: Exception) {
+                                                    selectedLocationName = "Error al obtener dirección"
+                                                }
+                                            }
                                         },
-                                        onMapReady = { mapView ->
-                                            mapView.controller.setCenter(GeoPoint(lat, lng))
-                                        }
+                                        onMapReady = { mapView -> mapView.controller.setCenter(GeoPoint(lat, lng)) }
                                     )
                                 }
 
                                 Spacer(modifier = Modifier.height(8.dp))
+
+                                Text("Dirección: $selectedLocationName", fontSize = 12.sp, color = textColor)
 
                                 Button(
                                     onClick = { showFullMap = true },
@@ -375,9 +388,18 @@ fun RutasScreen(
                         modifier = Modifier.fillMaxSize(),
                         zoom = 17.0,
                         userLocation = userLocation,
-                        selectedMarker = selectedLocation, // Usar el mismo estado compartido
+                        selectedMarker = selectedLocation,
                         onMarkerAdded = { lat, lng ->
-                            selectedLocation = Pair(lat, lng) // Actualizar el estado compartido
+                            selectedLocation = Pair(lat, lng)
+
+                            coroutineScope.launch {
+                                try {
+                                    val address = NominatimClient.apiService.reverseGeocode(lat = lat, lon = lng)
+                                    selectedLocationName = address.display_name ?: "Dirección no encontrada"
+                                } catch (e: Exception) {
+                                    selectedLocationName = "Error al obtener dirección"
+                                }
+                            }
                         },
                         onMapReady = { mapView ->
                             userLocation?.let { (lat, lng) ->
