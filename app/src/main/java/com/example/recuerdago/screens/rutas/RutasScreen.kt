@@ -7,12 +7,15 @@ import android.content.pm.PackageManager
 import android.location.LocationManager
 import android.net.Uri
 import android.provider.Settings
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -23,10 +26,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import com.example.recuerdago.screens.GetCurrentLocation
 import com.example.recuerdago.screens.MiniMap
 import kotlinx.coroutines.delay
+import org.osmdroid.util.GeoPoint
 
 @Composable
 fun RutasScreen(
@@ -50,6 +55,10 @@ fun RutasScreen(
     // Estados para controlar el diálogo de GPS
     var showGpsDialog by remember { mutableStateOf(false) }
     var gpsError by remember { mutableStateOf("") }
+    var showFullMap by remember { mutableStateOf(false) }
+
+    var selectedLocation by remember { mutableStateOf<Pair<Double, Double>?>(null) }
+    var selectedLocationName by remember { mutableStateOf("") }
 
     val sampleLocations = listOf(
         LocationItem("Casa", "Av. Principal 123, Quevedo", "85%"),
@@ -91,7 +100,11 @@ fun RutasScreen(
             },
             onError = { error ->
                 locationStatus = error
-                if (error.contains("GPS", ignoreCase = true) || error.contains("activar", ignoreCase = true)) {
+                if (error.contains("GPS", ignoreCase = true) || error.contains(
+                        "activar",
+                        ignoreCase = true
+                    )
+                ) {
                     showGpsDialog = true
                     gpsError = error
                 }
@@ -165,6 +178,7 @@ fun RutasScreen(
             Dialog(onDismissRequest = {
                 showNewRouteDialog = false
                 userLocation = null
+                selectedLocation = null
                 locationStatus = "Esperando..."
             }) {
                 Card(
@@ -197,9 +211,10 @@ fun RutasScreen(
                                 Text(
                                     "Ingresa un nombre...", color = textColor.copy(alpha = 0.5f)
                                 )
-                            })
+                            }
+                        )
 
-                        // En el diálogo, modifica la sección de estado de ubicación:
+                        // Estado de ubicación
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             colors = CardDefaults.cardColors(
@@ -219,10 +234,19 @@ fun RutasScreen(
                                     color = textColor.copy(alpha = 0.8f)
                                 )
 
+                                // Mostrar ubicación seleccionada si existe
+                                selectedLocation?.let { (lat, lng) ->
+                                    Text(
+                                        text = "Marcador seleccionado: $lat, $lng",
+                                        fontSize = 12.sp,
+                                        color = Color(0xFF4CAF50),
+                                        modifier = Modifier.padding(top = 4.dp)
+                                    )
+                                }
+
                                 if (!hasLocationPermission) {
                                     Button(
                                         onClick = {
-                                            // Abrir configuración de la app para otorgar permisos
                                             val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                                                 data = Uri.fromParts("package", context.packageName, null)
                                             }
@@ -241,20 +265,37 @@ fun RutasScreen(
                             }
                         }
 
+                        // Mapa
                         userLocation?.let { (lat, lng) ->
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(200.dp),
-                                colors = CardDefaults.cardColors(containerColor = Color(0xFFE3F2FD))
-                            ) {
-                                MiniMap(
-                                    modifier = Modifier.fillMaxSize(),
-                                    zoom = 17.0
-                                ) { mapView ->
-                                    mapView.controller.setCenter(
-                                        org.osmdroid.util.GeoPoint(lat, lng)
+                            Column {
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(200.dp),
+                                    colors = CardDefaults.cardColors(containerColor = Color(0xFFE3F2FD))
+                                ) {
+                                    MiniMap(
+                                        modifier = Modifier.fillMaxSize(),
+                                        zoom = 17.0,
+                                        userLocation = userLocation,
+                                        selectedMarker = selectedLocation, // Pasar el estado compartido
+                                        onMarkerAdded = { lat, lng ->
+                                            selectedLocation = Pair(lat, lng) // Actualizar el estado compartido
+                                        },
+                                        onMapReady = { mapView ->
+                                            mapView.controller.setCenter(GeoPoint(lat, lng))
+                                        }
                                     )
+                                }
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                Button(
+                                    onClick = { showFullMap = true },
+                                    colors = ButtonDefaults.buttonColors(containerColor = primaryColor),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("Ver mapa completo", color = Color.White)
                                 }
                             }
                         } ?: run {
@@ -262,9 +303,7 @@ fun RutasScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(100.dp),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = Color(0xFFFFF3E0)
-                                )
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF3E0))
                             ) {
                                 Box(
                                     modifier = Modifier.fillMaxSize(),
@@ -286,6 +325,7 @@ fun RutasScreen(
                             }
                         }
 
+                        // Botones
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.End
@@ -293,6 +333,7 @@ fun RutasScreen(
                             TextButton(onClick = {
                                 showNewRouteDialog = false
                                 userLocation = null
+                                selectedLocation = null
                                 locationStatus = "Esperando..."
                             }) {
                                 Text("Cancelar", color = textColor)
@@ -304,6 +345,7 @@ fun RutasScreen(
                                         rutas = rutas + newRouteName
                                         newRouteName = ""
                                         userLocation = null
+                                        selectedLocation = null
                                         locationStatus = "Esperando..."
                                         showNewRouteDialog = false
                                     }
@@ -313,6 +355,50 @@ fun RutasScreen(
                                 Text("Agregar", color = Color.White)
                             }
                         }
+                    }
+                }
+            }
+        }
+
+        // Mapa completo
+        if (showFullMap) {
+            Dialog(
+                onDismissRequest = { showFullMap = false },
+                properties = DialogProperties(usePlatformDefaultWidth = false)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.White)
+                ) {
+                    MiniMap(
+                        modifier = Modifier.fillMaxSize(),
+                        zoom = 17.0,
+                        userLocation = userLocation,
+                        selectedMarker = selectedLocation, // Usar el mismo estado compartido
+                        onMarkerAdded = { lat, lng ->
+                            selectedLocation = Pair(lat, lng) // Actualizar el estado compartido
+                        },
+                        onMapReady = { mapView ->
+                            userLocation?.let { (lat, lng) ->
+                                mapView.controller.setCenter(GeoPoint(lat, lng))
+                            }
+                        }
+                    )
+
+                    // Botón cerrar
+                    IconButton(
+                        onClick = { showFullMap = false },
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(16.dp)
+                            .background(Color.Black.copy(alpha = 0.6f), shape = CircleShape)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Cerrar",
+                            tint = Color.White
+                        )
                     }
                 }
             }

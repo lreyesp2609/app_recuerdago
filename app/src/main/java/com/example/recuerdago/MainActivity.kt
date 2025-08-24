@@ -10,7 +10,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Lock
@@ -42,7 +41,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Crea UNA SOLA instancia de AuthViewModel ligada al ciclo de vida de la activity
         val authViewModel: AuthViewModel = ViewModelProvider(
             this,
             AuthViewModel.AuthViewModelFactory(this)
@@ -166,7 +164,6 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Botón iniciar sesión
         Button(
             onClick = {
                 if (email.isNotBlank() && password.isNotBlank()) {
@@ -183,7 +180,7 @@ fun LoginScreen(
                 .fillMaxWidth()
                 .height(50.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF1976D2), // azul más intenso
+                containerColor = Color(0xFF1976D2),
                 contentColor = Color.White
             ),
             enabled = !authViewModel.isLoading
