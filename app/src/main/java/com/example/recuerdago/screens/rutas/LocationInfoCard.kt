@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import com.example.recuerdago.network.NominatimClient
 
+
 @Composable
 fun LocationInfoCard(
     userLocation: Pair<Double, Double>?,
@@ -324,12 +325,40 @@ private fun SearchableLocationRow(
             if (isEditingName) {
                 OutlinedTextField(
                     value = locationCustomName,
-                    onValueChange = onCustomNameChange,
+                    onValueChange = { newValue ->
+                        if (newValue.length <= 100) { // Limitar a 100 caracteres
+                            onCustomNameChange(newValue)
+                        }
+                    },
                     placeholder = {
                         Text(
                             text = "Ej: Casa, Trabajo, Universidad...",
                             fontSize = 12.sp,
                             color = Color.Gray
+                        )
+                    },
+                    trailingIcon = {
+                        // Botón X para limpiar el campo
+                        if (locationCustomName.isNotEmpty()) {
+                            IconButton(
+                                onClick = { onCustomNameChange("") },
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Limpiar nombre",
+                                    tint = Color.Red,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    },
+                    supportingText = {
+                        Text(
+                            text = "${locationCustomName.length}/100 caracteres",
+                            fontSize = 10.sp,
+                            color = if (locationCustomName.length >= 90) Color.Red else Color.Gray,
+                            modifier = Modifier.fillMaxWidth()
                         )
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -348,7 +377,10 @@ private fun SearchableLocationRow(
                     isError = locationCustomName.isBlank(),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = if (locationCustomName.isBlank()) Color.Red else Color.Blue,
-                        unfocusedBorderColor = if (locationCustomName.isBlank()) Color.Red.copy(alpha = 0.5f) else Color.Gray
+                        unfocusedBorderColor = if (locationCustomName.isBlank()) Color.Red.copy(alpha = 0.5f) else Color.Gray,
+                        focusedTextColor = Color.Black,
+                        unfocusedTextColor = Color.Black,
+                        cursorColor = Color.Black
                     )
                 )
                 if (locationCustomName.isBlank()) {
