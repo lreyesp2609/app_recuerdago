@@ -27,6 +27,8 @@ import com.example.recuerdago.ui.theme.RecuerdagoTheme
 import com.example.recuerdago.viewmodel.AuthViewModel
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.material.icons.filled.AccessAlarm
+import androidx.compose.ui.graphics.toArgb
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.NavController
 import androidx.navigation.NavType
@@ -45,6 +47,20 @@ class MainActivity : ComponentActivity() {
             this,
             AuthViewModel.AuthViewModelFactory(this)
         )[AuthViewModel::class.java]
+
+        // Configurar barras del sistema para toda la app
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+
+        // Configurar colores de las barras (siempre negro)
+        window.navigationBarColor = Color.Black.toArgb()
+        window.statusBarColor = Color.Black.toArgb()
+
+        // Configurar iconos blancos
+        val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
+        windowInsetsController.apply {
+            isAppearanceLightStatusBars = false
+            isAppearanceLightNavigationBars = false
+        }
 
         setContent {
             RecuerdagoTheme {
