@@ -4,7 +4,6 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.location.LocationManager
 import android.net.Uri
 import android.provider.Settings
 import androidx.compose.foundation.background
@@ -31,7 +30,6 @@ import androidx.core.content.ContextCompat
 import com.example.recuerdago.network.NominatimClient
 import com.example.recuerdago.screens.GetCurrentLocation
 import com.example.recuerdago.screens.MiniMap
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.osmdroid.util.GeoPoint
 
@@ -46,7 +44,6 @@ fun RutasScreen(
     val context = LocalContext.current
 
     var rutas by remember { mutableStateOf(listOf("Ruta 1", "Ruta 2")) }
-    var showContent by remember { mutableStateOf(false) }
     var showNewRouteDialog by remember { mutableStateOf(false) }
     var newRouteName by remember { mutableStateOf("") }
 
@@ -69,20 +66,11 @@ fun RutasScreen(
         LocationItem("Trabajo", "Calle Secundaria 45, Quevedo", "70%")
     )
 
-    // Función para verificar si el GPS está activado
-    fun isLocationEnabled(context: Context): Boolean {
-        val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
-                locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
-    }
-
     // Función para abrir la configuración de ubicación
     fun openLocationSettings(context: Context) {
         val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
         context.startActivity(intent)
     }
-
-    LaunchedEffect(Unit) { delay(300); showContent = true }
 
     // Añade esta verificación al inicio del diálogo
     LaunchedEffect(showNewRouteDialog) {
@@ -238,14 +226,14 @@ fun RutasScreen(
                                 )
 
                                 // Mostrar ubicación seleccionada si existe
-                                selectedLocation?.let { (lat, lng) ->
+                                /* selectedLocation?.let { (lat, lng) ->
                                     Text(
                                         text = "Marcador seleccionado: $lat, $lng",
                                         fontSize = 12.sp,
                                         color = Color(0xFF4CAF50),
                                         modifier = Modifier.padding(top = 4.dp)
                                     )
-                                }
+                                } */
 
                                 if (!hasLocationPermission) {
                                     Button(
@@ -282,6 +270,7 @@ fun RutasScreen(
                                         zoom = 17.0,
                                         userLocation = userLocation,
                                         selectedMarker = selectedLocation,
+                                        showRecenterButton = true,
                                         onMarkerAdded = { lat, lng ->
                                             selectedLocation = Pair(lat, lng)
 
@@ -389,6 +378,7 @@ fun RutasScreen(
                         zoom = 17.0,
                         userLocation = userLocation,
                         selectedMarker = selectedLocation,
+                        showRecenterButton = true, // Habilitar botón de recentrado
                         onMarkerAdded = { lat, lng ->
                             selectedLocation = Pair(lat, lng)
 
@@ -408,7 +398,7 @@ fun RutasScreen(
                         }
                     )
 
-                    // Botón cerrar
+                    // Botón cerrar (ahora se posiciona mejor evitando el botón de recentrado)
                     IconButton(
                         onClick = { showFullMap = false },
                         modifier = Modifier
