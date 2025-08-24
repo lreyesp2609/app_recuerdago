@@ -198,7 +198,6 @@ fun HomeScreen(
                 isDarkTheme = isDarkTheme,
                 primaryColor = primaryColor,
                 textColor = textColor,
-                cardColors = cardColors
             )
         }
     }
