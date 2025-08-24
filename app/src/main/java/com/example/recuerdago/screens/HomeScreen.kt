@@ -177,7 +177,7 @@ fun HomeScreen(
                     accentColor = accentColor,
                     cardColors = cardColors,
                     isDarkTheme = isDarkTheme,
-                    onTabSelected = { selectedTab = it } // Pasar la función para cambiar tab
+                    onTabSelected = { selectedTab = it }
                 )
             }
         }

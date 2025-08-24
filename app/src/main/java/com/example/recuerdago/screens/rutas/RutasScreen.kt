@@ -1,5 +1,7 @@
 package com.example.recuerdago.screens.rutas
 
+import android.os.Handler
+import android.os.Looper
 import androidx.compose.runtime.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -15,7 +17,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import com.example.recuerdago.screens.MapView
-import com.example.recuerdago.screens.components.LocationInfoCard
 
 @Composable
 fun RutasScreen(
@@ -91,7 +92,7 @@ fun RutasScreen(
                                 // Mover el mapa a la ubicación buscada
                                 searchLocation = lat to lng
                                 // Resetear después de un momento para permitir futuras búsquedas
-                                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                                Handler(Looper.getMainLooper()).postDelayed({
                                     searchLocation = null
                                 }, 1000)
                             },
@@ -126,7 +127,7 @@ fun RutasScreen(
                         FloatingActionButton(
                             onClick = {
                                 showNewRouteDialog = false
-                                locationCustomName = "" // Limpiar el nombre al cerrar
+                                locationCustomName = ""
                             },
                             modifier = Modifier
                                 .align(Alignment.BottomStart)
