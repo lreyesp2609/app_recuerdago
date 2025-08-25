@@ -17,9 +17,10 @@ import com.example.recuerdago.network.NominatimClient
 fun LocationInfoCard(
     userLocation: Pair<Double, Double>?,
     selectedLocation: Pair<Double, Double>?,
-    onLocationSearch: ((Double, Double) -> Unit)? = null,
     locationCustomName: String,
     onCustomNameChange: (String) -> Unit,
+    onLocationSearch: (Double, Double) -> Unit,
+    onAddressChange: (String) -> Unit, // ← NUEVO PARÁMETRO
     modifier: Modifier = Modifier
 ) {
     var userAddress by remember { mutableStateOf<String?>(null) }
@@ -55,8 +56,10 @@ fun LocationInfoCard(
 
                         if (lat != null && lon != null) {
                             // Mover el mapa a la ubicación encontrada
-                            onLocationSearch?.invoke(lat, lon)
+                            onLocationSearch.invoke(lat, lon)
                             selectedAddress = result.display_name
+                            // ← AGREGAR ESTA LÍNEA PARA SINCRONIZAR
+                            onAddressChange(result.display_name ?: "")
                             isSearchMode = false
                             keyboardController?.hide()
                         }
@@ -64,6 +67,7 @@ fun LocationInfoCard(
                 } catch (e: Exception) {
                     // Manejar error de búsqueda
                     selectedAddress = "No se encontró la ubicación"
+                    onAddressChange("No se encontró la ubicación") // ← AGREGAR
                 } finally {
                     isSearching = false
                 }
@@ -101,9 +105,14 @@ fun LocationInfoCard(
                         )
                         selectedAddress = response.display_name
                         searchText = response.display_name ?: ""
+                        // ← AGREGAR ESTA LÍNEA CRÍTICA
+                        onAddressChange(response.display_name ?: "Ubicación: $lat, $lon")
                     } catch (e: Exception) {
-                        selectedAddress = "Ubicación: $lat, $lon"
-                        searchText = "Ubicación: $lat, $lon"
+                        val fallbackAddress = "Ubicación: $lat, $lon"
+                        selectedAddress = fallbackAddress
+                        searchText = fallbackAddress
+                        // ← AGREGAR ESTA LÍNEA TAMBIÉN
+                        onAddressChange(fallbackAddress)
                     } finally {
                         isLoadingSelected = false
                     }

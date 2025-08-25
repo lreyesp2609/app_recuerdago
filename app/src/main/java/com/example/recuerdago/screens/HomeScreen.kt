@@ -40,6 +40,7 @@ fun HomeScreen(
     val userState = authViewModel.user
     val isLoggedIn = authViewModel.isLoggedIn
     val isDarkTheme = isSystemInDarkTheme()
+    val accessToken = authViewModel.accessToken ?: ""
 
     // Estados de animación
     var isVisible by remember { mutableStateOf(false) }
@@ -185,21 +186,12 @@ fun HomeScreen(
 
     @Composable
     fun RutasTab(navController: NavController, userId: String) {
-        // Contenedor responsivo para RutasScreen
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp)
-                .padding(top = 80.dp), // Mismo padding que HomeTabContent
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            RutasScreen(
-                userId = userId,
-                isDarkTheme = isDarkTheme,
-                primaryColor = primaryColor,
-                textColor = textColor,
-            )
-        }
+        RutasScreen(
+            token = accessToken,
+            isDarkTheme = isDarkTheme,
+            primaryColor = primaryColor,
+            textColor = textColor
+        )
     }
 
     @Composable

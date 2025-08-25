@@ -76,12 +76,9 @@ class MainActivity : ComponentActivity() {
                         composable("home") {
                             HomeScreen(authViewModel = authViewModel, navController = navController)
                         }
-                        composable(
-                            "rutas/{userId}",
-                            arguments = listOf(navArgument("userId") { type = NavType.StringType })
-                        ) { backStackEntry ->
-                            val userId = backStackEntry.arguments?.getString("userId") ?: "N/A"
-                            RutasScreen(userId = userId)
+                        composable("rutas") {
+                            val token = authViewModel.accessToken ?: ""
+                            RutasScreen(token = token)
                         }
                     }
                 }
