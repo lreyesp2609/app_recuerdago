@@ -17,4 +17,11 @@ interface UbicacionesApiService {
     suspend fun obtenerUbicaciones(
         @Header("Authorization") token: String
     ): Response<List<UbicacionUsuarioResponse>>
+
+    @GET("ubicaciones/{id}")
+    suspend fun obtenerUbicacionPorId(
+        @Header("Authorization") token: String,
+        @Path("id") id: Int
+    ): Response<UbicacionUsuarioResponse>
+
 }

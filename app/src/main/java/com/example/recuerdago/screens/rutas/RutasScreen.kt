@@ -1,5 +1,6 @@
 package com.example.recuerdago.screens.rutas
 
+import SimpleMapView
 import android.os.Handler
 import android.os.Looper
 import androidx.compose.foundation.background
@@ -27,13 +28,12 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.sp
 import com.example.recuerdago.data.models.UbicacionUsuarioCreate
 import com.example.recuerdago.screens.MapView
-import com.example.recuerdago.screens.rutas.cards.FullScreenMapDialog
 import com.example.recuerdago.screens.rutas.cards.UbicacionCard
 import com.example.recuerdago.screens.rutas.views.UbicacionesViewModel
 
 @Composable
 fun RutasScreen(
-    token: String, // Token de autenticación
+    token: String,
     isDarkTheme: Boolean = false,
     primaryColor: Color = Color(0xFF1976D2),
     textColor: Color = Color.Black
@@ -52,14 +52,11 @@ fun RutasScreen(
     val isLoading by remember { derivedStateOf { viewModel.isLoading } }
     val errorMessage by remember { derivedStateOf { viewModel.errorMessage } }
     val ubicaciones by remember { derivedStateOf { viewModel.ubicaciones } }
-    var showMap by remember { mutableStateOf(false) }
 
-    // Cargar ubicaciones al iniciar la pantalla
     LaunchedEffect(Unit) {
         viewModel.cargarUbicaciones()
     }
 
-    // Colores para el tema
     val cardBackgroundColor = if (isDarkTheme) Color(0xFF2D2D44) else Color.White
     val secondaryTextColor = if (isDarkTheme) Color(0xFFB0BEC5) else Color(0xFF616161)
     val accentColor = Color(0xFFFF6B6B)
@@ -181,12 +178,9 @@ fun RutasScreen(
                 }
 
                 errorMessage != null -> {
-                    val currentError = errorMessage // Variable local para evitar smart cast issues
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = Color(0xFFFFEBEE)
-                        ),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEE)),
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Column(
@@ -201,7 +195,7 @@ fun RutasScreen(
                             )
                             Spacer(modifier = Modifier.height(12.dp))
                             Text(
-                                text = currentError ?: "Error desconocido",
+                                text = errorMessage ?: "Error desconocido",
                                 color = Color(0xFFD32F2F),
                                 textAlign = TextAlign.Center,
                                 fontSize = 16.sp
@@ -248,10 +242,7 @@ fun RutasScreen(
                 }
 
                 else -> {
-                    // Lista de ubicaciones
-                    LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         items(ubicaciones) { ubicacion ->
                             UbicacionCard(
                                 ubicacion = ubicacion,
@@ -260,34 +251,57 @@ fun RutasScreen(
                                 secondaryTextColor = secondaryTextColor,
                                 cardBackgroundColor = cardBackgroundColor,
                                 accentColor = accentColor,
-                                onViewClick = { showMap = true }
+                                onViewClick = { coords, address ->
+                                    selectedLocation = coords
+                                    selectedAddress = address
+                                    showFullScreenMap = true
+                                }
                             )
                         }
-
-                        // Spacer al final
-                        item {
-                            Spacer(modifier = Modifier.height(16.dp))
-                        }
+                        item { Spacer(modifier = Modifier.height(16.dp)) }
                     }
+                }
+            }
+        }
 
-                    // Mostrar el mapa en un Dialog cuando se presiona "Ver"
-                    if (showMap) {
-                        FullScreenMapDialog(
+        // Dialog mapa fullscreen
+        if (showFullScreenMap && selectedLocation != null) {
+            Dialog(
+                onDismissRequest = {
+                    showFullScreenMap = false
+                    selectedLocation = null
+                    selectedAddress = null
+                },
+                properties = DialogProperties(usePlatformDefaultWidth = false)
+            ) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .statusBarsPadding()
+                        .navigationBarsPadding(),
+                    color = Color.White
+                ) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        SimpleMapView(
+                            modifier = Modifier.fillMaxSize(),
+                            selectedLocation = selectedLocation,
                             userLocation = userLocation,
-                            onDismiss = { showMap = false }
+                            savedAddress = selectedAddress
                         )
                     }
                 }
             }
         }
 
-        // Dialog para agregar nueva ubicación (sin cambios)
+        // Dialog agregar nueva ubicación
         if (showNewRouteDialog) {
             Dialog(
                 onDismissRequest = {
                     showNewRouteDialog = false
                     locationCustomName = ""
                     selectedAddress = null
+                    selectedLocation = null
+                    userLocation = null
                 },
                 properties = DialogProperties(usePlatformDefaultWidth = false)
             ) {
@@ -299,11 +313,11 @@ fun RutasScreen(
                     color = if (isDarkTheme) Color(0xFF2D2D44) else Color.White
                 ) {
                     Box(modifier = Modifier.fillMaxSize()) {
-                        // Mapa de fondo
                         MapView(
                             modifier = Modifier.fillMaxSize(),
                             onLocationSelected = { lat, lng ->
                                 userLocation = lat to lng
+                                selectedLocation = lat to lng
                             },
                             onMapCenterChanged = { lat, lng ->
                                 selectedLocation = lat to lng
@@ -311,7 +325,6 @@ fun RutasScreen(
                             moveToLocation = searchLocation
                         )
 
-                        // Tarjeta de información
                         LocationInfoCard(
                             userLocation = userLocation,
                             selectedLocation = selectedLocation,
@@ -331,7 +344,6 @@ fun RutasScreen(
                                 .padding(16.dp)
                         )
 
-                        // Botón Confirmar
                         FloatingActionButton(
                             onClick = {
                                 if (locationCustomName.isNotBlank()) {
@@ -346,6 +358,8 @@ fun RutasScreen(
                                             showNewRouteDialog = false
                                             locationCustomName = ""
                                             selectedAddress = null
+                                            selectedLocation = null
+                                            userLocation = null
                                         }
                                     }
                                 }
@@ -366,47 +380,6 @@ fun RutasScreen(
                                     imageVector = Icons.Default.Check,
                                     contentDescription = "Confirmar ubicación",
                                     tint = Color.White
-                                )
-                            }
-                        }
-
-                        // Botón cerrar dialog
-                        FloatingActionButton(
-                            onClick = {
-                                showNewRouteDialog = false
-                                locationCustomName = ""
-                                selectedAddress = null
-                            },
-                            modifier = Modifier
-                                .align(Alignment.BottomStart)
-                                .padding(16.dp),
-                            containerColor = Color.Gray
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Cerrar",
-                                tint = Color.White
-                            )
-                        }
-
-                        // Mostrar error si ocurre
-                        errorMessage?.let { error ->
-                            Card(
-                                modifier = Modifier
-                                    .align(Alignment.BottomCenter)
-                                    .padding(16.dp)
-                                    .fillMaxWidth(),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = Color(0xFFFFEBEE)
-                                ),
-                                shape = RoundedCornerShape(8.dp)
-                            ) {
-                                Text(
-                                    text = error,
-                                    color = Color(0xFFD32F2F),
-                                    fontWeight = FontWeight.SemiBold,
-                                    modifier = Modifier.padding(16.dp),
-                                    textAlign = TextAlign.Center
                                 )
                             }
                         }

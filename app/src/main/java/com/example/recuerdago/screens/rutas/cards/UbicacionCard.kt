@@ -53,13 +53,13 @@ import kotlinx.coroutines.delay
 
 @Composable
 fun UbicacionCard(
-    ubicacion: Any, // Tu modelo de ubicación
+    ubicacion: Any,
     primaryColor: Color,
     textColor: Color,
     secondaryTextColor: Color,
     cardBackgroundColor: Color,
     accentColor: Color,
-    onViewClick: (() -> Unit)? = null
+    onViewClick: ((Pair<Double, Double>, String) -> Unit)? = null
 ) {
     var isPressed by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(
@@ -68,7 +68,7 @@ fun UbicacionCard(
         label = ""
     )
 
-    // Extraer datos usando reflection (ajusta según tu modelo)
+    // Extraer datos usando reflection
     val nombre = try {
         ubicacion::class.java.getDeclaredField("nombre").apply { isAccessible = true }.get(ubicacion) as? String ?: "Sin nombre"
     } catch (e: Exception) { "Sin nombre" }
@@ -95,7 +95,6 @@ fun UbicacionCard(
             .scale(scale)
             .clickable {
                 isPressed = true
-                // Aquí puedes agregar acciones como ver en mapa, editar, etc.
             }
             .clip(RoundedCornerShape(16.dp)),
         colors = CardDefaults.cardColors(containerColor = cardBackgroundColor),
@@ -162,7 +161,6 @@ fun UbicacionCard(
                     }
                 }
 
-                // Menú de opciones
                 IconButton(
                     onClick = { /* Mostrar menú de opciones */ },
                     modifier = Modifier.size(32.dp)
@@ -228,7 +226,9 @@ fun UbicacionCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 OutlinedButton(
-                    onClick = { onViewClick?.invoke() },
+                    onClick = {
+                        onViewClick?.invoke(latitud to longitud, direccionCompleta)
+                    },
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.outlinedButtonColors(
                         contentColor = primaryColor
