@@ -1,6 +1,5 @@
 package com.example.recuerdago.screens.rutas
 
-import SimpleMapView
 import android.os.Handler
 import android.os.Looper
 import androidx.compose.foundation.background
@@ -23,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.sp
 import com.example.recuerdago.data.models.UbicacionUsuarioCreate
@@ -40,13 +40,14 @@ fun RutasScreen(
 ) {
     val viewModel = remember { UbicacionesViewModel(token) }
 
+    var showNewRouteDialog by rememberSaveable { mutableStateOf(false) }
+    var locationCustomName by rememberSaveable { mutableStateOf("") }
+    var selectedAddress by rememberSaveable { mutableStateOf<String?>(null) }
+
     var showFullScreenMap by remember { mutableStateOf(false) }
-    var showNewRouteDialog by remember { mutableStateOf(false) }
     var userLocation by remember { mutableStateOf<Pair<Double, Double>?>(null) }
     var selectedLocation by remember { mutableStateOf<Pair<Double, Double>?>(null) }
     var searchLocation by remember { mutableStateOf<Pair<Double, Double>?>(null) }
-    var locationCustomName by remember { mutableStateOf("") }
-    var selectedAddress by remember { mutableStateOf<String?>(null) }
 
     val isLoading by remember { derivedStateOf { viewModel.isLoading } }
     val errorMessage by remember { derivedStateOf { viewModel.errorMessage } }
@@ -295,7 +296,7 @@ fun RutasScreen(
                         .fillMaxSize()
                         .statusBarsPadding()
                         .navigationBarsPadding(),
-                    color = Color.White
+                    color = if (isDarkTheme) Color(0xFF2D2D44) else Color.White
                 ) {
                     Box(modifier = Modifier.fillMaxSize()) {
                         // Mapa de fondo

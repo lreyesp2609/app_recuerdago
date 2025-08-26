@@ -47,27 +47,6 @@ class AuthRepository {
         }
     }
 
-    suspend fun register(
-        name: String,
-        email: String,
-        password: String
-    ): Result<LoginResponse> {
-        return withContext(Dispatchers.IO) {
-            try {
-                val response = api.register(name, email, password)
-                if (response.isSuccessful) {
-                    response.body()?.let { Result.success(it) }
-                        ?: Result.failure(Exception("Respuesta vacía"))
-                } else {
-                    val errorMsg = response.errorBody()?.string() ?: "Error desconocido"
-                    Result.failure(Exception(errorMsg))
-                }
-            } catch (e: Exception) {
-                Result.failure(e)
-            }
-        }
-    }
-
     suspend fun getCurrentUser(token: String) = withContext(Dispatchers.IO) {
         try {
             Log.d("AuthRepository", "Obteniendo usuario con token: $token")

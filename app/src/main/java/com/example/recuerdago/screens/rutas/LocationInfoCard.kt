@@ -164,7 +164,6 @@ fun LocationInfoCard(
                 onCustomNameChange = onCustomNameChange,
                 onEditNameToggle = { isEditingName = !isEditingName },
                 textColor = textColor,
-                primaryColor = primaryColor,
                 errorColor = errorColor
             )
         }
