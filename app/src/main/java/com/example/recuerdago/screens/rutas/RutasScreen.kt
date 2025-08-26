@@ -1,5 +1,6 @@
 package com.example.recuerdago.screens.rutas
 
+import SimpleMapView
 import android.os.Handler
 import android.os.Looper
 import androidx.compose.foundation.background
@@ -26,6 +27,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.sp
 import com.example.recuerdago.data.models.UbicacionUsuarioCreate
 import com.example.recuerdago.screens.MapView
+import com.example.recuerdago.screens.rutas.cards.FullScreenMapDialog
 import com.example.recuerdago.screens.rutas.cards.UbicacionCard
 import com.example.recuerdago.screens.rutas.views.UbicacionesViewModel
 
@@ -38,6 +40,7 @@ fun RutasScreen(
 ) {
     val viewModel = remember { UbicacionesViewModel(token) }
 
+    var showFullScreenMap by remember { mutableStateOf(false) }
     var showNewRouteDialog by remember { mutableStateOf(false) }
     var userLocation by remember { mutableStateOf<Pair<Double, Double>?>(null) }
     var selectedLocation by remember { mutableStateOf<Pair<Double, Double>?>(null) }
@@ -48,6 +51,7 @@ fun RutasScreen(
     val isLoading by remember { derivedStateOf { viewModel.isLoading } }
     val errorMessage by remember { derivedStateOf { viewModel.errorMessage } }
     val ubicaciones by remember { derivedStateOf { viewModel.ubicaciones } }
+    var showMap by remember { mutableStateOf(false) }
 
     // Cargar ubicaciones al iniciar la pantalla
     LaunchedEffect(Unit) {
@@ -55,7 +59,6 @@ fun RutasScreen(
     }
 
     // Colores para el tema
-    val backgroundColor = if (isDarkTheme) Color(0xFF1A1A2E) else Color(0xFFF8F9FA)
     val cardBackgroundColor = if (isDarkTheme) Color(0xFF2D2D44) else Color.White
     val secondaryTextColor = if (isDarkTheme) Color(0xFFB0BEC5) else Color(0xFF616161)
     val accentColor = Color(0xFFFF6B6B)
@@ -244,6 +247,7 @@ fun RutasScreen(
                 }
 
                 else -> {
+                    // Lista de ubicaciones
                     LazyColumn(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
@@ -255,14 +259,22 @@ fun RutasScreen(
                                 secondaryTextColor = secondaryTextColor,
                                 cardBackgroundColor = cardBackgroundColor,
                                 accentColor = accentColor,
-                                isDarkTheme = isDarkTheme
+                                onViewClick = { showMap = true }
                             )
                         }
 
-                        // Spacer al final para evitar que el último elemento se corte
+                        // Spacer al final
                         item {
                             Spacer(modifier = Modifier.height(16.dp))
                         }
+                    }
+
+                    // Mostrar el mapa en un Dialog cuando se presiona "Ver"
+                    if (showMap) {
+                        FullScreenMapDialog(
+                            userLocation = userLocation,
+                            onDismiss = { showMap = false }
+                        )
                     }
                 }
             }

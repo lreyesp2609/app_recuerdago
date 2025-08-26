@@ -48,7 +48,10 @@ fun SearchableLocationRow(
     onSearchModeToggle: () -> Unit,
     onSearch: () -> Unit,
     onCustomNameChange: (String) -> Unit,
-    onEditNameToggle: () -> Unit
+    onEditNameToggle: () -> Unit,
+    textColor: Color,
+    errorColor: Color
+
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -57,15 +60,13 @@ fun SearchableLocationRow(
         Icon(
             imageVector = Icons.Default.LocationOn,
             contentDescription = null,
-            tint = Color.Red,
+            tint = errorColor, // 🔴 rojo configurable
             modifier = Modifier.size(20.dp)
         )
 
         Spacer(modifier = Modifier.width(12.dp))
 
-        Column(
-            modifier = Modifier.weight(1f)
-        ) {
+        Column(modifier = Modifier.weight(1f)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -75,18 +76,14 @@ fun SearchableLocationRow(
                     text = "Ubicación seleccionada",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.Black.copy(alpha = 0.8f)
+                    color = textColor.copy(alpha = 0.8f)
                 )
 
-                // Botón para alternar modo búsqueda
-                IconButton(
-                    onClick = onSearchModeToggle,
-                    modifier = Modifier.size(24.dp)
-                ) {
+                IconButton(onClick = onSearchModeToggle, modifier = Modifier.size(24.dp)) {
                     Icon(
                         imageVector = if (isSearchMode) Icons.Default.Close else Icons.Default.Search,
-                        contentDescription = if (isSearchMode) "Cancelar búsqueda" else "Buscar ubicación",
-                        tint = Color.Red,
+                        contentDescription = null,
+                        tint = errorColor, // 🔴 configurable
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -105,7 +102,7 @@ fun SearchableLocationRow(
                         text = "Nombre de la ubicación:",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
-                        color = Color.Black.copy(alpha = 0.8f)
+                        color = textColor.copy(alpha = 0.8f)
                     )
                     // Asterisco rojo indicando campo obligatorio
                     Text(
@@ -283,7 +280,7 @@ fun SearchableLocationRow(
                     Text(
                         text = selectedAddress ?: "Mueve el mapa para seleccionar",
                         fontSize = 12.sp,
-                        color = Color.Black.copy(alpha = 0.7f),
+                        color = textColor.copy(alpha = 0.7f),
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.clickable { onSearchModeToggle() }

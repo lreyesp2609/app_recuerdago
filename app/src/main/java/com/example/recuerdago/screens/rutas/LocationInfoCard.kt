@@ -1,5 +1,6 @@
 package com.example.recuerdago.screens.rutas
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -20,8 +21,12 @@ fun LocationInfoCard(
     locationCustomName: String,
     onCustomNameChange: (String) -> Unit,
     onLocationSearch: (Double, Double) -> Unit,
-    onAddressChange: (String) -> Unit, // ← NUEVO PARÁMETRO
-    modifier: Modifier = Modifier
+    onAddressChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    cardBackgroundColor: Color = if (isSystemInDarkTheme()) Color(0xFF2D2D44) else Color.White,
+    textColor: Color = if (isSystemInDarkTheme()) Color.White else Color.Black,
+    primaryColor: Color = if (isSystemInDarkTheme()) Color(0xFF64B5F6) else Color.Blue,
+    errorColor: Color = Color.Red
 ) {
     var userAddress by remember { mutableStateOf<String?>(null) }
     var selectedAddress by remember { mutableStateOf<String?>(null) }
@@ -124,25 +129,23 @@ fun LocationInfoCard(
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.White.copy(alpha = 0.95f)
-        ),
+        colors = CardDefaults.cardColors(containerColor = cardBackgroundColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Ubicación del usuario (GPS - punto azul)
             LocationRow(
                 icon = Icons.Default.MyLocation,
-                iconColor = Color.Blue,
+                iconColor = primaryColor,
                 title = "Tu ubicación actual",
                 address = userAddress ?: "Obteniendo ubicación...",
-                isLoading = userAddress == null
+                isLoading = userAddress == null,
+                textColor = textColor
             )
 
-            Divider(color = Color.Gray.copy(alpha = 0.3f))
+            Divider(color = textColor.copy(alpha = 0.3f))
 
             SearchableLocationRow(
                 isSearchMode = isSearchMode,
@@ -155,13 +158,14 @@ fun LocationInfoCard(
                 onSearchTextChange = { searchText = it },
                 onSearchModeToggle = {
                     isSearchMode = !isSearchMode
-                    if (isSearchMode) {
-                        searchText = selectedAddress ?: ""
-                    }
+                    if (isSearchMode) searchText = selectedAddress ?: ""
                 },
                 onSearch = searchLocation,
                 onCustomNameChange = onCustomNameChange,
-                onEditNameToggle = { isEditingName = !isEditingName }
+                onEditNameToggle = { isEditingName = !isEditingName },
+                textColor = textColor,
+                primaryColor = primaryColor,
+                errorColor = errorColor
             )
         }
     }

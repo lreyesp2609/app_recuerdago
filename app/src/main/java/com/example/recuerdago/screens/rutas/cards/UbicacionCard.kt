@@ -59,7 +59,7 @@ fun UbicacionCard(
     secondaryTextColor: Color,
     cardBackgroundColor: Color,
     accentColor: Color,
-    isDarkTheme: Boolean
+    onViewClick: (() -> Unit)? = null
 ) {
     var isPressed by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(
@@ -228,7 +228,7 @@ fun UbicacionCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 OutlinedButton(
-                    onClick = { /* Ver en mapa */ },
+                    onClick = { onViewClick?.invoke() },
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.outlinedButtonColors(
                         contentColor = primaryColor

@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -21,11 +22,12 @@ import androidx.compose.ui.unit.sp
 
 @Composable
 fun LocationRow(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     iconColor: Color,
     title: String,
     address: String,
-    isLoading: Boolean
+    isLoading: Boolean,
+    textColor: Color = Color.Black // 👈 agregado
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -40,14 +42,12 @@ fun LocationRow(
 
         Spacer(modifier = Modifier.width(12.dp))
 
-        Column(
-            modifier = Modifier.weight(1f)
-        ) {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = Color.Black.copy(alpha = 0.8f)
+                color = textColor.copy(alpha = 0.8f) // 👈 usar textColor
             )
 
             Spacer(modifier = Modifier.height(4.dp))
@@ -63,14 +63,14 @@ fun LocationRow(
                     Text(
                         text = "Obteniendo dirección...",
                         fontSize = 12.sp,
-                        color = Color.Gray
+                        color = textColor.copy(alpha = 0.6f) // 👈 usar textColor
                     )
                 }
             } else {
                 Text(
                     text = address,
                     fontSize = 12.sp,
-                    color = Color.Black.copy(alpha = 0.7f),
+                    color = textColor.copy(alpha = 0.7f), // 👈 usar textColor
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
