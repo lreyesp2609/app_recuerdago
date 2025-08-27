@@ -1,7 +1,9 @@
 import android.content.Context
 import android.graphics.drawable.ShapeDrawable
 import android.graphics.drawable.shapes.OvalShape
+import android.location.Geocoder
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -9,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsBike
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
+import androidx.compose.material.icons.filled.Directions
 import androidx.compose.material.icons.filled.DirectionsBike
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.DirectionsWalk
@@ -27,14 +30,17 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.recuerdago.network.NominatimClient
 import com.example.recuerdago.screens.GetCurrentLocation
 import com.example.recuerdago.screens.GpsEnableButton
+import com.example.recuerdago.viewmodel.decodePolyline
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView as OsmMapView
 import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.Polyline
 
 @Composable
 fun SimpleMapView(
@@ -54,6 +60,8 @@ fun SimpleMapView(
     var showGpsButton by remember { mutableStateOf(false) }
     var retryCounter by remember { mutableIntStateOf(0) }
     var mapInstance by remember { mutableStateOf<OsmMapView?>(null) }
+    var hasInitializedLocation by remember { mutableStateOf(false) } // ✅ Cambio clave
+    var showRouteDialog by remember { mutableStateOf(false) } // ✅ Estado para mostrar diálogo de ruta
 
     // Estado de transporte seleccionado: "walking", "cycling", "driving"
     var selectedMode by rememberSaveable { mutableStateOf("walking") }
@@ -113,9 +121,13 @@ fun SimpleMapView(
         return
     }
 
-    if (userLocation == null && internalUserLocation == null) {
+    val currentLocation = userLocation ?: internalUserLocation
+    if (currentLocation == null) {
         Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
                 CircularProgressIndicator(color = accentColor)
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(text = "Obteniendo ubicación...", color = textColor.copy(alpha = 0.7f))
@@ -124,9 +136,10 @@ fun SimpleMapView(
         return
     }
 
-    val currentLocation = userLocation ?: internalUserLocation
+    val viewModel: MapViewModel = viewModel()
+    val route by viewModel.route
 
-    // Obtener dirección mediante Nominatim
+    // ✅ Obtener dirección y centrar mapa cuando la ubicación esté disponible
     LaunchedEffect(currentLocation) {
         currentLocation?.let { (lat, lon) ->
             try {
@@ -135,67 +148,101 @@ fun SimpleMapView(
             } catch (e: Exception) {
                 currentAddress = "Error al obtener dirección"
             }
+
+            // ✅ Centrar el mapa cuando tengamos la ubicación
+            if (!hasInitializedLocation) {
+                mapInstance?.let { map ->
+                    map.controller.setCenter(GeoPoint(lat, lon))
+                    map.controller.setZoom(16.0)
+                    hasInitializedLocation = true
+                }
+            }
+        }
+    }
+
+    // Fetch ruta cuando haya ubicación y selección
+    LaunchedEffect(currentLocation, selectedLocation, selectedMode) {
+        if (currentLocation != null && selectedLocation != null) {
+            viewModel.setMode(selectedMode)
+            viewModel.fetchRoute(currentLocation, selectedLocation)
+        }
+    }
+
+    // ✅ Actualizar overlays cuando cambie la ruta o ubicaciones
+    LaunchedEffect(route, currentLocation, selectedLocation, mapInstance) {
+        mapInstance?.let { map ->
+            map.overlays.clear()
+
+            // Marcador usuario (azul)
+            currentLocation?.let { (lat, lon) ->
+                val userPoint = GeoPoint(lat, lon)
+                val userMarker = Marker(map).apply {
+                    position = userPoint
+                    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                    icon = ShapeDrawable(OvalShape()).apply {
+                        intrinsicHeight = 40
+                        intrinsicWidth = 40
+                        paint.color = android.graphics.Color.BLUE
+                        paint.style = android.graphics.Paint.Style.FILL
+                    }
+                }
+                map.overlays.add(userMarker)
+            }
+
+            // Marcador destino (rojo)
+            selectedLocation?.let { (lat, lon) ->
+                val destPoint = GeoPoint(lat, lon)
+                val destMarker = Marker(map).apply {
+                    position = destPoint
+                    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                    icon = ShapeDrawable(OvalShape()).apply {
+                        intrinsicHeight = 40
+                        intrinsicWidth = 40
+                        paint.color = android.graphics.Color.RED
+                        paint.style = android.graphics.Paint.Style.FILL
+                    }
+                }
+                map.overlays.add(destMarker)
+
+                // ✅ Centrar en el marcador rojo cuando se seleccione
+                map.controller.animateTo(destPoint)
+            }
+
+            // Dibujar polyline de la ruta
+            route?.routes?.firstOrNull()?.let { routeData ->
+                val polyline = Polyline().apply {
+                    setPoints(routeData.geometry.decodePolyline())
+                    outlinePaint.color = android.graphics.Color.BLUE
+                    outlinePaint.strokeWidth = 6f
+                }
+                map.overlays.add(polyline)
+            }
+
+            // ✅ Mover a ubicación específica si se proporciona
+            moveToLocation?.let { (mlat, mlon) ->
+                map.controller.animateTo(GeoPoint(mlat, mlon))
+            }
+
+            // Refrescar el mapa
+            map.invalidate()
         }
     }
 
     Box(modifier = modifier.fillMaxSize()) {
-
-        // 1️⃣ Mapa
+        // Mapa
         AndroidView(
             modifier = Modifier.fillMaxSize(),
             factory = { ctx ->
                 OsmMapView(ctx).apply {
                     setTileSource(TileSourceFactory.MAPNIK)
                     setMultiTouchControls(true)
-                    controller.setZoom(16.0)
+                    controller.setZoom(16.0) // ✅ Mismo zoom que el botón centrar
                     mapInstance = this
-                }
-            },
-            update = { map ->
-                map.overlays.clear()
-
-                // Marcador azul: usuario actual
-                currentLocation?.let { (lat, lon) ->
-                    val geoPoint = GeoPoint(lat, lon)
-                    val shape = ShapeDrawable(OvalShape()).apply {
-                        intrinsicHeight = 40
-                        intrinsicWidth = 40
-                        paint.color = android.graphics.Color.BLUE
-                        paint.style = android.graphics.Paint.Style.FILL
-                    }
-                    val marker = Marker(map).apply {
-                        position = geoPoint
-                        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-                        icon = shape
-                    }
-                    map.overlays.add(marker)
-                }
-
-                // Marcador rojo: ubicación seleccionada
-                selectedLocation?.let { (lat, lon) ->
-                    val geoPoint = GeoPoint(lat, lon)
-                    val shape = ShapeDrawable(OvalShape()).apply {
-                        intrinsicHeight = 40
-                        intrinsicWidth = 40
-                        paint.color = android.graphics.Color.RED
-                        paint.style = android.graphics.Paint.Style.FILL
-                    }
-                    val marker = Marker(map).apply {
-                        position = geoPoint
-                        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-                        icon = shape
-                    }
-                    map.overlays.add(marker)
-                    map.controller.animateTo(geoPoint)
-                }
-
-                moveToLocation?.let { (mlat, mlon) ->
-                    map.controller.animateTo(GeoPoint(mlat, mlon))
                 }
             }
         )
 
-        // 2️⃣ Card superior: tu ubicación
+        // Card superior: ubicación actual
         currentLocation?.let {
             Card(
                 modifier = Modifier
@@ -214,13 +261,13 @@ fun SimpleMapView(
             }
         }
 
-        // 3️⃣ Card inferior: ubicación guardada
+        // Card inferior: ubicación guardada
         savedAddress?.let { address ->
             Card(
                 modifier = Modifier
-                    .align(Alignment.BottomStart) // 👈 ahora va a la izquierda
+                    .align(Alignment.BottomStart)
                     .padding(16.dp)
-                    .fillMaxWidth(0.8f), // 👈 ocupa 80% del ancho
+                    .fillMaxWidth(0.8f),
                 colors = CardDefaults.cardColors(containerColor = cardBackgroundColor),
                 elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
                 shape = RoundedCornerShape(12.dp)
@@ -233,7 +280,7 @@ fun SimpleMapView(
             }
         }
 
-        // 4️⃣ Botones de transporte + centrar (abajo derecha)
+        // Botones transporte y centrar
         Column(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
@@ -241,73 +288,134 @@ fun SimpleMapView(
             verticalArrangement = Arrangement.spacedBy(12.dp),
             horizontalAlignment = Alignment.End
         ) {
-            // 🚶 A pie
+            // Botón de ruta
+            FloatingActionButton(
+                onClick = {
+                    if (selectedLocation != null) {
+                        showRouteDialog = true
+                    }
+                },
+                containerColor = if (selectedLocation != null) Color(0xFF4CAF50) else Color.Gray,
+                contentColor = Color.White,
+                modifier = Modifier.size(56.dp)
+            ) {
+                Icon(Icons.Default.Directions, contentDescription = "Mostrar ruta")
+            }
+
             FloatingActionButton(
                 onClick = { selectedMode = "walking" },
                 containerColor = if (selectedMode == "walking") accentColor else Color.LightGray,
                 contentColor = Color.White,
                 modifier = Modifier.size(56.dp)
-            ) {
-                Icon(Icons.Default.DirectionsWalk, contentDescription = "Caminar")
-            }
+            ) { Icon(Icons.Default.DirectionsWalk, contentDescription = "Caminar") }
 
-            // 🚲 Bicicleta
             FloatingActionButton(
                 onClick = { selectedMode = "cycling" },
                 containerColor = if (selectedMode == "cycling") accentColor else Color.LightGray,
                 contentColor = Color.White,
                 modifier = Modifier.size(56.dp)
-            ) {
-                Icon(Icons.Default.DirectionsBike, contentDescription = "Bicicleta")
-            }
+            ) { Icon(Icons.Default.DirectionsBike, contentDescription = "Bicicleta") }
 
-            // 🚗 Carro
             FloatingActionButton(
                 onClick = { selectedMode = "driving" },
                 containerColor = if (selectedMode == "driving") accentColor else Color.LightGray,
                 contentColor = Color.White,
                 modifier = Modifier.size(56.dp)
-            ) {
-                Icon(Icons.Default.DirectionsCar, contentDescription = "Carro")
-            }
+            ) { Icon(Icons.Default.DirectionsCar, contentDescription = "Carro") }
 
-            // 🎯 Centrar mapa
             FloatingActionButton(
                 onClick = {
                     currentLocation?.let { (lat, lon) ->
-                        mapInstance?.let { map ->
-                            val currentZoom = map.zoomLevelDouble
-                            map.controller.setCenter(GeoPoint(lat, lon))
-                            map.controller.setZoom(currentZoom)
+                        mapInstance?.controller?.apply {
+                            animateTo(GeoPoint(lat, lon))
+                            setZoom(16.0)
                         }
                     }
                 },
                 containerColor = Color(0xFF2196F3),
                 contentColor = Color.White,
                 modifier = Modifier.size(56.dp)
-            ) {
-                Icon(Icons.Default.MyLocation, contentDescription = "Centrar en mi ubicación")
-            }
+            ) { Icon(Icons.Default.MyLocation, contentDescription = "Centrar en mi ubicación") }
         }
-    }
-}
 
+        // Diálogo de selección de ruta
+        if (showRouteDialog) {
+            AlertDialog(
+                onDismissRequest = { showRouteDialog = false },
+                title = { Text("Seleccionar modo de transporte") },
+                text = {
+                    Column {
+                        Text("¿Cómo quieres llegar a tu destino?")
+                        Spacer(modifier = Modifier.height(16.dp))
 
-@Composable
-fun TransportIcon(icon: ImageVector, selected: Boolean, onClick: () -> Unit) {
-    IconButton(
-        onClick = onClick,
-        modifier = Modifier
-            .size(48.dp)
-            .background(
-                if (selected) Color(0xFF1976D2) else Color.Transparent,
-                shape = CircleShape
+                        // Opción Caminar
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    selectedMode = "walking"
+                                    showRouteDialog = false
+                                    // Forzar recálculo de ruta
+                                    if (currentLocation != null && selectedLocation != null) {
+                                        viewModel.setMode(selectedMode)
+                                        viewModel.fetchRoute(currentLocation, selectedLocation)
+                                    }
+                                }
+                                .padding(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.DirectionsWalk, contentDescription = null, tint = accentColor)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text("Caminando", fontSize = 16.sp)
+                        }
+
+                        // Opción Bicicleta
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    selectedMode = "cycling"
+                                    showRouteDialog = false
+                                    if (currentLocation != null && selectedLocation != null) {
+                                        viewModel.setMode(selectedMode)
+                                        viewModel.fetchRoute(currentLocation, selectedLocation)
+                                    }
+                                }
+                                .padding(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.DirectionsBike, contentDescription = null, tint = accentColor)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text("En bicicleta", fontSize = 16.sp)
+                        }
+
+                        // Opción Carro
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    selectedMode = "driving"
+                                    showRouteDialog = false
+                                    if (currentLocation != null && selectedLocation != null) {
+                                        viewModel.setMode(selectedMode)
+                                        viewModel.fetchRoute(currentLocation, selectedLocation)
+                                    }
+                                }
+                                .padding(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.DirectionsCar, contentDescription = null, tint = accentColor)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text("En carro", fontSize = 16.sp)
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showRouteDialog = false }) {
+                        Text("Cancelar")
+                    }
+                }
             )
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = if (selected) Color.White else Color.Gray
-        )
+        }
     }
 }
